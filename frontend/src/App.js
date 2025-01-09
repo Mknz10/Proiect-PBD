@@ -18,7 +18,7 @@ function App() {
   const [error, setError] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isProductEditModalOpen, setIsProductEditModalOpen] = useState(false);
-  const [production, setProduction] = useState([]);
+  const [setProduction] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderQuantity, setOrderQuantity] = useState(1); // Default to quantity 1
@@ -39,6 +39,7 @@ function App() {
     Status_Produs: "activ", // Default value
     Durata_Productie: null,
   });
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -240,6 +241,30 @@ function App() {
   //   filterType ? product.Tip && product.Tip.includes(filterType) : true
   // );
 
+  const generateReport = () => {
+    const totalOrders = orders.length;
+    const activeProducts = products.filter(
+      (product) => product.Status_Produs === "activ"
+    ).length;
+    const lowStockProducts = products.filter(
+      (product) => product.Cantitate_Stoc <= 5
+    ).length;
+
+    return {
+      totalOrders,
+      activeProducts,
+      lowStockProducts,
+    };
+  };
+
+  const [reportData, setReportData] = useState(null);
+
+  const handleViewReports = () => {
+    const data = generateReport();
+    setReportData(data);
+    setIsReportModalOpen(true);
+  };
+
   return (
     <div className="App">
       <header>
@@ -251,7 +276,7 @@ function App() {
         Start Production
       </button>
       <button onClick={() => setIsProductModalOpen(true)}>Add Product</button>
-
+      <button onClick={handleViewReports}>View Reports</button>{" "}
       <section>
         <h2>Clients</h2>
         <ul>
@@ -262,7 +287,6 @@ function App() {
           ))}
         </ul>
       </section>
-
       {/* Products List */}
       <section>
         <h2>Products</h2>
@@ -285,7 +309,6 @@ function App() {
           ))}
         </ul>
       </section>
-
       {/* Orders List */}
       <section>
         <h2>Orders</h2>
@@ -298,7 +321,6 @@ function App() {
           ))}
         </ul>
       </section>
-
       {/* Modal for editing a product */}
       <Modal
         isOpen={isProductEditModalOpen && selectedProductForEdit !== null}
@@ -351,7 +373,6 @@ function App() {
         <button onClick={handleEditProduct}>Save Changes</button>
         <button onClick={() => setIsProductEditModalOpen(false)}>Close</button>
       </Modal>
-
       {/* Modal for adding a new client */}
       <Modal
         isOpen={isClientModalOpen}
@@ -401,7 +422,6 @@ function App() {
         <button onClick={handleCreateClient}>Create Client</button>
         <button onClick={() => setIsClientModalOpen(false)}>Close</button>
       </Modal>
-
       {/* Modal for adding a new product */}
       <Modal
         isOpen={isProductModalOpen}
@@ -563,7 +583,6 @@ function App() {
           <button onClick={() => setIsProductModalOpen(false)}>Close</button>
         </div>
       </Modal>
-
       {/* Modal for creating an order */}
       <Modal isOpen={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
         <h2>Create Order</h2>
@@ -605,7 +624,6 @@ function App() {
         <button onClick={handleCreateOrder}>Create Order</button>
         <button onClick={() => setIsModalOpen(false)}>Close</button>
       </Modal>
-
       {/* Modal for starting production */}
       <Modal
         isOpen={isProductionModalOpen}
@@ -635,6 +653,26 @@ function App() {
         {error && <p className="error">{error}</p>}
         <button onClick={handleStartProduction}>Start Production</button>
         <button onClick={() => setIsProductionModalOpen(false)}>Close</button>
+      </Modal>
+      {/* Reports Modal */}
+      <Modal
+        isOpen={isReportModalOpen}
+        onRequestClose={() => setIsReportModalOpen(false)}
+      >
+        <h2>Reports</h2>
+        <div>
+          <h3>Total Orders</h3>
+          <p>{reportData ? reportData.totalOrders : "Loading..."}</p>
+        </div>
+        <div>
+          <h3>Active Products</h3>
+          <p>{reportData ? reportData.activeProducts : "Loading..."}</p>
+        </div>
+        <div>
+          <h3>Low Stock Products (&lt;= 5 items)</h3> {/* Corectat */}
+          <p>{reportData ? reportData.lowStockProducts : "Loading..."}</p>
+        </div>
+        <button onClick={() => setIsReportModalOpen(false)}>Close</button>
       </Modal>
     </div>
   );
