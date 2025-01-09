@@ -18,10 +18,17 @@ function App() {
   const [error, setError] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isProductEditModalOpen, setIsProductEditModalOpen] = useState(false);
-  const [setProduction] = useState([]);
+  const [production, setProduction] = useState([]);
+  const [isProductionDataModalOpen, setIsProductionDataModalOpen] =
+    useState(false);
+  const [productRawMaterials, setProductRawMaterials] = useState([]);
+  const [isProductRawMaterialModalOpen, setIsProductRawMaterialModalOpen] =
+    useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderQuantity, setOrderQuantity] = useState(1); // Default to quantity 1
+  const [isMateriaPrimaModalOpen, setIsMateriaPrimaModalOpen] = useState(false);
+  const [materiaPrimaData, setMateriaPrimaData] = useState([]);
   const [newClient, setNewClient] = useState({
     Nume: "",
     Email: "",
@@ -46,6 +53,8 @@ function App() {
     fetchProducts();
     fetchOrders();
     fetchProduction();
+    fetchProductRawMaterials();
+    fetchMateriaPrima();
   }, []);
 
   const fetchClients = async () => {
@@ -60,7 +69,11 @@ function App() {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/products`);
-      setProducts(response.data);
+      if (Array.isArray(response.data)) {
+        setProducts(response.data);
+      } else {
+        console.error("Expected an array of products, but got:", response.data);
+      }
     } catch (error) {
       console.error("Error fetching products:", error);
     }
@@ -84,10 +97,29 @@ function App() {
     }
   };
 
+  const fetchProductRawMaterials = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/product_raw_materials`);
+      setProductRawMaterials(response.data);
+    } catch (error) {
+      console.error("Error fetching product raw materials:", error);
+    }
+  };
+
+  const fetchMateriaPrima = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/materia_prima");
+      const data = await response.json();
+      setMateriaPrimaData(data);
+    } catch (error) {
+      console.error("Error fetching Materia Prima data:", error);
+    }
+  };
+
   const handleCreateProduct = async () => {
     const productData = {
       Denumire: newProduct.Denumire,
-      Pret_Unitar: newProduct.Pret_Unitar, // Ensure that this matches backend field name
+      Pret_Unitar: newProduct.Pret_Unitar,
       Cantitate_Stoc: newProduct.Cantitate_Stoc,
       Descriere: newProduct.Descriere,
       Dimensiuni: newProduct.Dimensiuni,
@@ -97,9 +129,18 @@ function App() {
     };
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/products`, productData);
+      const response = await axios.post(
+        `${API_BASE_URL}/products`,
+        productData
+      );
       console.log("Product created successfully:", response.data);
-      setIsProductModalOpen(false); // Close the modal
+
+      // Safeguard: Ensure that the product is returned with necessary data
+      if (response.data.product) {
+        setProducts((prevProducts) => [...prevProducts, response.data.product]);
+      }
+
+      setIsProductModalOpen(false);
     } catch (error) {
       console.error("Error creating product:", error.response.data);
     }
@@ -321,6 +362,18 @@ function App() {
           ))}
         </ul>
       </section>
+      <section>
+        <h2>Show Tables</h2>
+        <button onClick={() => setIsProductRawMaterialModalOpen(true)}>
+          Show Product Raw Materials
+        </button>
+        <button onClick={() => setIsProductionDataModalOpen(true)}>
+          Show Production
+        </button>{" "}
+        <button onClick={() => setIsMateriaPrimaModalOpen(true)}>
+          View Materia Prima
+        </button>
+      </section>
       {/* Modal for editing a product */}
       <Modal
         isOpen={isProductEditModalOpen && selectedProductForEdit !== null}
@@ -374,11 +427,12 @@ function App() {
         <button onClick={() => setIsProductEditModalOpen(false)}>Close</button>
       </Modal>
       {/* Modal for adding a new client */}
+      {/* Modal for creating a new client */}
       <Modal
         isOpen={isClientModalOpen}
         onRequestClose={() => setIsClientModalOpen(false)}
       >
-        <h2>Add Client</h2>
+        <h2>Create New Client</h2>
         <input
           type="text"
           placeholder="Name"
@@ -394,7 +448,7 @@ function App() {
           }
         />
         <input
-          type="text"
+          type="tel"
           placeholder="Phone"
           value={newClient.Telefon}
           onChange={(e) =>
@@ -415,11 +469,11 @@ function App() {
             setNewClient({ ...newClient, Tip_Client: e.target.value })
           }
         >
-          <option value="">Select Type</option>
-          <option value="Regular">Regular</option>
-          <option value="VIP">VIP</option>
+          <option value="">Select Client Type</option>
+          <option value="fizic">Individual</option>
+          <option value="juridic">Business</option>
         </select>
-        <button onClick={handleCreateClient}>Create Client</button>
+        <button onClick={handleCreateClient}>Add Client</button>
         <button onClick={() => setIsClientModalOpen(false)}>Close</button>
       </Modal>
       {/* Modal for adding a new product */}
@@ -583,45 +637,68 @@ function App() {
           <button onClick={() => setIsProductModalOpen(false)}>Close</button>
         </div>
       </Modal>
-      {/* Modal for creating an order */}
+      {/* Modal for creating a new order */}
       <Modal isOpen={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
-        <h2>Create Order</h2>
-        <select
-          value={selectedClient?.ID_Client || ""}
-          onChange={(e) =>
-            setSelectedClient(
-              clients.find((client) => client.ID_Client === e.target.value)
-            )
-          }
-        >
-          <option value="">Select Client</option>
-          {clients.map((client) => (
-            <option key={client.ID_Client} value={client.ID_Client}>
-              {client.Nume}
-            </option>
-          ))}
-        </select>
-        <select
-          value={selectedProduct?.ID_Produs || ""}
-          onChange={(e) =>
-            setSelectedProduct(
-              products.find((product) => product.ID_Produs === e.target.value)
-            )
-          }
-        >
-          <option value="">Select Product</option>
-          {products.map((product) => (
-            <option key={product.ID_Produs} value={product.ID_Produs}>
-              {product.Denumire}
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          value={orderQuantity}
-          onChange={(e) => setOrderQuantity(e.target.value)}
-        />
-        <button onClick={handleCreateOrder}>Create Order</button>
+        <h2>Create New Order</h2>
+
+        {/* Client selection */}
+        <div>
+          <h3>Client:</h3>
+          <select
+            onChange={(e) =>
+              setSelectedClient(
+                clients.find(
+                  (client) => client.ID_Client === parseInt(e.target.value)
+                )
+              )
+            }
+            value={selectedClient ? selectedClient.ID_Client : ""}
+          >
+            <option value="">Select a client</option>
+            {clients.map((client) => (
+              <option key={client.ID_Client} value={client.ID_Client}>
+                {client.Nume} ({client.Email})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Product selection */}
+        <div>
+          <h3>Product:</h3>
+          <select
+            onChange={(e) =>
+              setSelectedProduct(
+                products.find(
+                  (product) => product.ID_Produs === parseInt(e.target.value)
+                )
+              )
+            }
+            value={selectedProduct ? selectedProduct.ID_Produs : ""}
+          >
+            <option value="">Select a product</option>
+            {products.map((product) => (
+              <option key={product.ID_Produs} value={product.ID_Produs}>
+                {product.Denumire} (Stock: {product.Cantitate_Stoc})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Quantity input */}
+        <div>
+          <h3>Quantity:</h3>
+          <input
+            type="number"
+            min="1"
+            value={orderQuantity}
+            onChange={(e) => setOrderQuantity(e.target.value)}
+            disabled={!selectedProduct}
+          />
+        </div>
+
+        {/* Place Order Button */}
+        <button onClick={handleCreateOrder}>Place Order</button>
         <button onClick={() => setIsModalOpen(false)}>Close</button>
       </Modal>
       {/* Modal for starting production */}
@@ -630,27 +707,35 @@ function App() {
         onRequestClose={() => setIsProductionModalOpen(false)}
       >
         <h2>Start Production</h2>
-        <select
-          value={selectedProduct?.ID_Produs || ""}
-          onChange={(e) =>
-            setSelectedProduct(
-              products.find((product) => product.ID_Produs === e.target.value)
-            )
-          }
-        >
-          <option value="">Select Product</option>
-          {products.map((product) => (
-            <option key={product.ID_Produs} value={product.ID_Produs}>
-              {product.Denumire}
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          value={productionQuantity}
-          onChange={handleQuantityChange}
-        />
-        {error && <p className="error">{error}</p>}
+        <div>
+          <label>Product:</label>
+          <select
+            value={selectedProduct ? selectedProduct.ID_Produs : ""}
+            onChange={(e) => {
+              const selected = products.find(
+                (p) => p.ID_Produs === parseInt(e.target.value)
+              );
+              setSelectedProduct(selected);
+            }}
+          >
+            <option value="">Select Product</option>
+            {products.map((product) => (
+              <option key={product.ID_Produs} value={product.ID_Produs}>
+                {product.Denumire}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label>Quantity:</label>
+          <input
+            type="number"
+            value={productionQuantity}
+            onChange={(e) => setProductionQuantity(e.target.value)}
+            min="1"
+          />
+        </div>
+        {error && <div style={{ color: "red" }}>{error}</div>}
         <button onClick={handleStartProduction}>Start Production</button>
         <button onClick={() => setIsProductionModalOpen(false)}>Close</button>
       </Modal>
@@ -673,6 +758,62 @@ function App() {
           <p>{reportData ? reportData.lowStockProducts : "Loading..."}</p>
         </div>
         <button onClick={() => setIsReportModalOpen(false)}>Close</button>
+      </Modal>
+      {/* Modal for Product Raw Materials */}
+      <Modal
+        isOpen={isProductRawMaterialModalOpen}
+        onRequestClose={() => setIsProductRawMaterialModalOpen(false)}
+      >
+        <h2>Product Raw Materials</h2>
+        <ul>
+          {productRawMaterials.map((productRawMaterial) => (
+            <li
+              key={`${productRawMaterial.ID_Produs}-${productRawMaterial.ID_Materie_Prima}`}
+            >
+              Product ID: {productRawMaterial.ID_Produs} - Raw Material ID:{" "}
+              {productRawMaterial.ID_Materie_Prima} - Quantity Needed:{" "}
+              {productRawMaterial.Cantitate_Necesara}
+            </li>
+          ))}
+        </ul>
+        <button onClick={() => setIsProductRawMaterialModalOpen(false)}>
+          Close
+        </button>
+      </Modal>
+      {/* Modal for Production */}
+      <Modal
+        isOpen={isProductionDataModalOpen} // Renamed modal state for production data
+        onRequestClose={() => setIsProductionDataModalOpen(false)}
+      >
+        <h2>Production</h2>
+        <ul>
+          {production.map((prod) => (
+            <li key={prod.ID_Productie}>
+              Product ID: {prod.ID_Produs} - Quantity:{" "}
+              {prod.Cantitate_Consumata} - Status: {prod.Status}
+            </li>
+          ))}
+        </ul>
+        <button onClick={() => setIsProductionDataModalOpen(false)}>
+          Close
+        </button>
+      </Modal>
+      {/* Modal for Materia Prima */}
+      <Modal
+        isOpen={isMateriaPrimaModalOpen}
+        onRequestClose={() => setIsMateriaPrimaModalOpen(false)}
+      >
+        <h2>Materia Prima</h2>
+        <ul>
+          {materiaPrimaData.map((item) => (
+            <li key={item.ID_Materie_Prima}>
+              Materia Prima: {item.Denumire} - Type: {item.Tip_Materie} -
+              Available Quantity: {item.Cantitate_Disponibila} - Supplier:{" "}
+              {item.Furnizor}
+            </li>
+          ))}
+        </ul>
+        <button onClick={() => setIsMateriaPrimaModalOpen(false)}>Close</button>
       </Modal>
     </div>
   );

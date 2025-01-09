@@ -382,24 +382,58 @@ app.get("/products", (req, res) => {
 
 // Create a new product
 app.post("/products", (req, res) => {
-  const { Denumire, Cantitate_Stoc, Pret_Unitar } = req.body;
+  const {
+    Denumire,
+    Cantitate_Stoc,
+    Pret_Unitar,
+    Descriere,
+    Dimensiuni,
+    Tip_Produs,
+    Durata_Productie,
+    Status_Produs,
+  } = req.body;
 
   if (!Denumire || Cantitate_Stoc == null || Pret_Unitar == null) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
   const query =
-    "INSERT INTO Produse_Finite (Denumire, Cantitate_Stoc, Pret_Unitar) VALUES (?, ?, ?)";
-  db.query(query, [Denumire, Cantitate_Stoc, Pret_Unitar], (err, result) => {
-    if (err) {
-      console.error("Error adding product:", err);
-      return res.status(500).json({ error: "Internal server error" });
+    "INSERT INTO Produse_Finite (Denumire, Cantitate_Stoc, Pret_Unitar, Descriere, Dimensiuni, Tip_Produs, Durata_Productie, Status_Produs) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+  db.query(
+    query,
+    [
+      Denumire,
+      Cantitate_Stoc,
+      Pret_Unitar,
+      Descriere,
+      Dimensiuni,
+      Tip_Produs,
+      Durata_Productie,
+      Status_Produs,
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Error adding product:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+
+      // Send the new product data back
+      res.status(201).json({
+        message: "Product created successfully",
+        product: {
+          ID_Produs: result.insertId,
+          Denumire,
+          Cantitate_Stoc,
+          Pret_Unitar,
+          Descriere,
+          Dimensiuni,
+          Tip_Produs,
+          Durata_Productie,
+          Status_Produs,
+        },
+      });
     }
-    res.status(201).json({
-      message: "Product created successfully",
-      productId: result.insertId,
-    });
-  });
+  );
 });
 
 // Update an existing product
@@ -454,6 +488,64 @@ app.delete("/products/:id", (req, res) => {
       return res.status(500).json({ error: "Internal server error" });
     }
     res.json({ message: "Product deleted successfully" });
+  });
+});
+
+// Fetch all Product Raw Materials
+app.get("/product_raw_materials", (req, res) => {
+  const query = "SELECT * FROM Product_Raw_Material"; // Query to fetch data from Product_Raw_Material table
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Error fetching raw material data:", err);
+      res.status(500).send("Error fetching raw material data");
+      return;
+    }
+    res.json(results);
+  });
+});
+
+// Fetch all production data
+app.get("/production", (req, res) => {
+  const query = `
+    SELECT p.ID_Productie, p.ID_Produs, p.Cantitate_Consumata, p.Data_Inceput, p.Status, pr.Denumire AS Product_Name
+    FROM Productie p
+    INNER JOIN Produse_Finite pr ON p.ID_Produs = pr.ID_Produs
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Error fetching production data:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    if (results.length === 0) {
+      console.log("No production data found.");
+    }
+
+    // Send the production data as a response
+    res.json(results);
+  });
+});
+
+// Fetch all raw materials (Materia_Prima)
+app.get("/materia_prima", (req, res) => {
+  const query = `
+    SELECT * FROM Materia_Prima
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Error fetching production data:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    if (results.length === 0) {
+      console.log("No production data found.");
+    }
+
+    // Send the production data as a response
+    res.json(results);
   });
 });
 
